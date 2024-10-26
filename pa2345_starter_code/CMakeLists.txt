@@ -11,6 +11,16 @@ add_executable(pa2
     ${CMAKE_CURRENT_SOURCE_DIR}/parent_work.c
     ${CMAKE_CURRENT_SOURCE_DIR}/work_with_pipes.c
     ${CMAKE_CURRENT_SOURCE_DIR}/bank_robbery.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/banking.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/child_work.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/common.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/ipc.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/pa2345.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/parent_work.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/pipes_const.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/pipes_const.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/work_with_pipes.h
+
 )
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)

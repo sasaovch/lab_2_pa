@@ -82,6 +82,9 @@ int init_child_work(void* __child_state) {
     fprintf(elf, "%s", msg.s_payload);
     fflush(elf);
 
+    fprintf(stdout, "%s", msg.s_payload);
+    fflush(stdout);
+
     // fprintf(stdout, "%s", s);
     // fflush(stdout);
     // сделать инлайн

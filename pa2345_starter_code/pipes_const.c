@@ -3,6 +3,11 @@
 #include "pa2345.h"
 #include "banking.h"
 
+
+FILE *elf;
+FILE *plf;
+
+int pm[10][10][2];
 // Message new_message_contructor(MessageType msg_type) {
 //   Message msg;
 //   char start_message[MAX_PAYLOAD_LEN + 1];

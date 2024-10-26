@@ -3,3 +3,5 @@ pa2345_starter_code/CMakeFiles
 pa2345_starter_code/cmake_install.cmake
 pa2345_starter_code/CMakeCache.txt
 pa2345_starter_code/Makefile
+.cache
+build

@@ -1,0 +1,11 @@
+0: process 1 (pid 13582, parent 10198) has STARTED with balance $ 1
+0: process 2 (pid 13583, parent 13582) has STARTED with balance $ 2
+0: process 3 (pid 13584, parent 13583) has STARTED with balance $ 3
+0: process 0 received all STARTED messages
+0: process 1 (pid 13729, parent 10198) has STARTED with balance $ 1
+0: process 2 (pid 13730, parent 13729) has STARTED with balance $ 2
+0: process 3 (pid 13731, parent 13730) has STARTED with balance $ 3
+0: process 0 received all STARTED messages
+0: process 1 received all STARTED messages
+0: process 3 received all STARTED messages
+0: process 2 received all STARTED messages

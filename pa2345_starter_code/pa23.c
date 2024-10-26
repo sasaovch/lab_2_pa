@@ -62,7 +62,7 @@ void transfer(void * parent_data, local_id src, local_id dst,
 // int pipes[9][9][2];
 
 int is_not_child(int fork_id) {
-    return fork_id != 0;
+    return fork_id == 0;
 }
 
 int main(int argc, char * argv[])
@@ -73,7 +73,7 @@ int main(int argc, char * argv[])
     // }
 
     // Чтение N
-    int N = atoi(argv[2]);
+    int N = atoi(argv[2]) + 1;
     // if (argc != N + 3) { // Проверка, что количество аргументов соответствует N
         // printf("Error: expected %d numbers after N\n", N);
         // return 1;
@@ -89,7 +89,7 @@ int main(int argc, char * argv[])
     // Заполнение массива
     // FIXME: тут определиться нужен ли
     array[0] = N; // Первый элемент - N
-    for (int i = 0; i < N; i++) array[i + 1] = atoi(argv[i + 3]); // Чтение целых чисел S
+    for (int i = 0; i < N - 1; i++) array[i + 1] = atoi(argv[i + 3]); // Чтение целых чисел S
 
     // Вывод массива для проверки
     // printf("Array: ");
@@ -136,7 +136,7 @@ int main(int argc, char * argv[])
             number_id++;
         } else {
             ChildState child_state = {
-                .fork_id = fork_id,
+                .fork_id = number_id,
                 .N = N,
                 .balance_history = {
                     .s_id = fork_id,
