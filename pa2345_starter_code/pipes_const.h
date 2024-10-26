@@ -11,8 +11,8 @@ typedef struct {
   int N;
 } Info;
 
-FILE *elf;
-FILE *plf;
+extern FILE *elf;
+extern FILE *plf;
 
 extern int pm[10][10][2];
 // Message new_message_contructor(MessageType msg_type);
