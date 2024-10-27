@@ -42,16 +42,6 @@ int send_to_pipe(void *__info, const Message *msg, local_id pipe_id) {
     return 0;
 }
 
-//FIXME: зачем этот метод
-void recieve_from_others(int receiver, int pipes[][2], int n, int* buffer) {
-    for (int i = 0; i < n; i++) {
-        if (i != receiver) {  // Не получать от самого себя
-            read(pipes[i][0], &buffer[i], sizeof(int));  // Чтение по pipe
-            printf("Process %d received message %d from process %d\n", receiver, buffer[i], i);
-        }
-    }
-}
-
 int receive(void *__info, local_id from, Message *msg) {
   Info *info = (Info *)__info;
   int fd = info->pm[from][info->fork_id][0];
@@ -63,4 +53,26 @@ int receive(void *__info, local_id from, Message *msg) {
     return -1;
   }
   return 0;
+}
+
+int receive_any(void * self, Message * msg) {
+    Info *info = (Info *) self;
+    local_id process_id = info->fork_id;
+    int not_received = 1;
+    
+    while(not_received) {
+        for (int from = 0; from < info->N; from++) {
+            if (from == process_id) continue;
+            if (read(pm[from][process_id][0], &msg->s_header, sizeof(MessageHeader)) <= 0) {
+                continue;
+            }
+            if (msg->s_header.s_payload_len > 0){
+                // do {
+                read(pm[from][process_id][0], &msg->s_payload, msg->s_header.s_payload_len);
+                not_received = 0;
+                // } while (nread == -1 || nread == 0);
+            }
+        }
+    }
+    return 1;
 }

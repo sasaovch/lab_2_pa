@@ -12,5 +12,8 @@ typedef struct {
 } ChildState;
 
 int init_child_work(void* __child_state);
+void update_state(ChildState* child_state, int sum, timestamp_t time);
+void transfer_handler(void* __child_state, Message* msg);
+int handle_transfers(void* __child_state);
 
 #endif

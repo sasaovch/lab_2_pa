@@ -55,8 +55,8 @@ void transfer(void * parent_data, local_id src, local_id dst,
     //         }
     //     }
     // }
-
-    send_to_pipe(info, &msg_transfer, src);
+    if (info->fork_id == 0) send_to_pipe(info, &msg_transfer, src);
+    if (info->fork_id == src) send_to_pipe(info, &msg_transfer, dst);
 }
 
 // int pipes[9][9][2];
@@ -149,14 +149,25 @@ int main(int argc, char * argv[])
                 }
             };
             init_child_work(&child_state);
+            handle_transfers(&child_state);
             return 0;
         }
     }
     // start_parent
     init_parent_work(N);
 
+    Info info = {.fork_id = 0, .N = N};
+
+    for(int i = 0; i < 10; i++) {
+        for(int j = 0; j < 10; j++) {
+            for(int k = 0; k < 2; k++) {
+                info.pm[i][j][k] = pm[i][j][k];
+            }
+        }
+    }
+
     // FIXME: понять что нужно
-    // bank_robbery(parent_data);
+    bank_robbery(&info, N);
     // print_history(all);
     
     free(array);
