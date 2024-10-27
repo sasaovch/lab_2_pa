@@ -65,11 +65,17 @@ int receive_any(void * self, Message * msg) {
             if (from == process_id) continue;
             if (read(pm[from][process_id][0], &msg->s_header, sizeof(MessageHeader)) <= 0) {
                 continue;
+            } else {
+              fprintf(stdout, "Received\n");
+              fflush(stdout);
             }
             if (msg->s_header.s_payload_len > 0){
                 // do {
                 read(pm[from][process_id][0], &msg->s_payload, msg->s_header.s_payload_len);
+                              fprintf(stdout, "Received payload\n");
+              fflush(stdout);
                 not_received = 0;
+                return msg->s_header.s_type;
                 // } while (nread == -1 || nread == 0);
             }
         }

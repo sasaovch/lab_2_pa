@@ -1,5 +1,6 @@
 #include "child_work.h"
 #include "pipes_const.h"
+#include "work_with_pipes.h"
 #include "common.h"
 #include "pa2345.h"
 
@@ -117,6 +118,7 @@ int init_child_work(void* __child_state) {
     }
 
     fprintf(elf, log_received_all_started_fmt, get_physical_time(), child_id);
+    fflush(elf);
 
     return 0;
 }
@@ -202,14 +204,14 @@ void transfer_handler(void* __child_state, Message* msg) {
             elf,
             log_transfer_out_fmt, 
             current_time, 
-            transfer_order->s_dst, transfer_order->s_amount, transfer_order->s_src);
+            transfer_order->s_src, transfer_order->s_amount, transfer_order->s_dst);
             fflush(elf);
 
         fprintf(
             stdout,
             log_transfer_out_fmt, 
             current_time, 
-            transfer_order->s_dst, transfer_order->s_amount, transfer_order->s_src);
+            transfer_order->s_src, transfer_order->s_amount, transfer_order->s_dst);
             fflush(stdout);
         
 
@@ -242,14 +244,16 @@ int handle_transfers(void* __child_state) {
         }
     }
 
-    Message msg;
+    Message msg_r;
+    fprintf(elf, "Started receiving message child_id %d\n", child_id);
+    fflush(elf);
     while (type != STOP) {
-        type = receive_any(&info, &msg);
-        fprintf(stdout, "Got message with type: %d", type);
+        type = receive_any(&info, &msg_r);
+        fprintf(stdout, "Got message with type: %d\n", type);
         fflush(stdout);
         switch (type) {
             case TRANSFER:
-                transfer_handler(&child_state, &msg);                
+                transfer_handler(child_state, &msg_r);                
                 break;
             // case STOP:
             //     send_done_to_all(&local);
@@ -286,12 +290,12 @@ int handle_transfers(void* __child_state) {
     msg.s_header.s_type = DONE;
     msg.s_header.s_local_time = time;
 
-    Info info = {.fork_id = child_id, .N = N};
+    Info info_send = {.fork_id = child_id, .N = N};
 
     for(int i = 0; i < 10; i++) {
         for(int j = 0; j < 10; j++) {
             for(int k = 0; k < 2; k++) {
-                info.pm[i][j][k] = pm[i][j][k];
+                info_send.pm[i][j][k] = pm[i][j][k];
             }
         }
     }
@@ -307,7 +311,7 @@ int handle_transfers(void* __child_state) {
     // fprintf(stdout, "%s", s);
     // fflush(stdout);
     // сделать инлайн
-    send_multicast(&info, &msg);
+    send_multicast(&info_send, &msg);
     
     local_id childs = 1;
     while (childs < N) {

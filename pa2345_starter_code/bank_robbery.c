@@ -8,10 +8,13 @@
  */
 
 #include "banking.h"
+#include <stdio.h>
 
 void bank_robbery(void * parent_data, local_id max_id)
 {
-    for (int i = 1; i < max_id; ++i) {
+    for (int i = 1; i < max_id; i++) {
+        fprintf(stdout, "Transfer %d to %d\n", i, i+1);
+        fflush(stdout);
         transfer(parent_data, i, i + 1, i);
     }
     if (max_id > 1) {

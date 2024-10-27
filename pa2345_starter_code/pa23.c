@@ -55,8 +55,23 @@ void transfer(void * parent_data, local_id src, local_id dst,
     //         }
     //     }
     // }
-    if (info->fork_id == 0) send_to_pipe(info, &msg_transfer, src);
-    if (info->fork_id == src) send_to_pipe(info, &msg_transfer, dst);
+    fprintf(stdout, "Info id %d\n", info->fork_id);
+    fflush(stdout);
+
+    fprintf(elf, "Transfer amount %d from %d to %d\n", amount, src, dst);
+    fflush(elf);
+
+    fprintf(stdout, "Transfer amount %d from %d to %d\n", amount, src, dst);
+    fflush(stdout);
+    if (info->fork_id == 0) {
+        send_to_pipe(info, &msg_transfer, src);
+        fprintf(stdout, "Wanted to send src to %d\n", src);
+
+    }
+    if (info->fork_id == src) {
+        fprintf(stdout, "Wanted to send dst to %d\n", dst);
+        send_to_pipe(info, &msg_transfer, dst);
+    }
 }
 
 // int pipes[9][9][2];
@@ -73,7 +88,8 @@ int main(int argc, char * argv[])
     // }
 
     // Чтение N
-    int N = atoi(argv[2]) + 1;
+    int N = 3;
+    // atoi(argv[2]) + 1;
     // if (argc != N + 3) { // Проверка, что количество аргументов соответствует N
         // printf("Error: expected %d numbers after N\n", N);
         // return 1;
@@ -89,7 +105,8 @@ int main(int argc, char * argv[])
     // Заполнение массива
     // FIXME: тут определиться нужен ли
     array[0] = N; // Первый элемент - N
-    for (int i = 0; i < N - 1; i++) array[i + 1] = atoi(argv[i + 3]); // Чтение целых чисел S
+    for (int i = 1; i < N; i++) array[i] = i;
+    // atoi(argv[i + 3]); // Чтение целых чисел S
 
     // Вывод массива для проверки
     // printf("Array: ");
@@ -101,6 +118,9 @@ int main(int argc, char * argv[])
     // Освобождение памяти
     elf = fopen(events_log, "a");
     plf = fopen(pipes_log, "a");
+
+    fprintf(elf, "-------------------\n");
+    fflush(elf);
 
     local_id line = 0;
     local_id column = 0;
@@ -139,7 +159,7 @@ int main(int argc, char * argv[])
                 .fork_id = number_id,
                 .N = N,
                 .balance_history = {
-                    .s_id = fork_id,
+                    .s_id = number_id,
                     .s_history_len = 1,
                     .s_history[0] = {
                         .s_balance = array[number_id],
@@ -155,6 +175,8 @@ int main(int argc, char * argv[])
     }
     // start_parent
     init_parent_work(N);
+    fprintf(stdout, "Started banck robbery\n");
+    fflush(stdout);
 
     Info info = {.fork_id = 0, .N = N};
 
