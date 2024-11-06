@@ -88,6 +88,7 @@ int main(int argc, char * argv[])
     // }
 
     // Чтение N
+    //TODO: N - общее число потоков: родитель + дети
     int N = 3;
     // atoi(argv[2]) + 1;
     // if (argc != N + 3) { // Проверка, что количество аргументов соответствует N
@@ -125,7 +126,7 @@ int main(int argc, char * argv[])
     local_id line = 0;
     local_id column = 0;
 
-    int all_pipes_number = N + 1;
+    int all_pipes_number = N;
 
     while (line < all_pipes_number) {
         column = 0;

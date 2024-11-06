@@ -14,7 +14,7 @@
 #include <sys/types.h>
 
 
-//TODO: N - это общее количество
+//TODO: N - это общее количество: родитель + дети
 int init_child_work(void* __child_state) {
     ChildState* child_state = (ChildState *) __child_state;
     local_id child_id = child_state->fork_id;
