@@ -83,13 +83,15 @@ int init_child_work(void* __child_state) {
     fprintf(elf, "%s", msg.s_payload);
     fflush(elf);
 
-    fprintf(stdout, "%s", msg.s_payload);
-    fflush(stdout);
+    // fprintf(stdout, "%s", msg.s_payload);
+    // fflush(stdout);
 
     // fprintf(stdout, "%s", s);
     // fflush(stdout);
     // сделать инлайн
     send_multicast(&info, &msg);
+    fprintf(elf, "Child %d send multicast STARTED \n", child_id);
+    fflush(elf);
     
         //     receive_from_all_children(&local, &msg, num_children);
         // received_all_started();
@@ -114,7 +116,18 @@ int init_child_work(void* __child_state) {
         }
 
         receive(&info, childs, &msg);
-        childs++;
+        // receive_any(&info, &msg);
+        // fprintf(elf, "Parent received %d message\n", started_msg.s_header.s_type);
+        // fflush(elf);
+        if (msg.s_header.s_type == STARTED && msg.s_header.s_payload_len > 0) {
+            // childs++;
+            // fprintf(elf, "Child %d received STARTED message\n", child_id);
+            // fflush(elf);
+
+            fprintf(elf, "Child %d received %d message: %s\n", child_id, msg.s_header.s_type, msg.s_payload);
+            fflush(elf);
+            childs++;
+        }
     }
 
     fprintf(elf, log_received_all_started_fmt, get_physical_time(), child_id);
@@ -165,9 +178,10 @@ void transfer_handler(void* __child_state, Message* msg) {
 
     timestamp_t current_time = get_physical_time();
     TransferOrder *transfer_order = (TransferOrder* ) msg->s_payload;
-    printf("Ttransfer_handler__________________________ amount - %d; from - %d; to -%d\n", transfer_order->s_amount, transfer_order->s_src, transfer_order->s_dst);
+    fprintf(elf, "transfer_handler _____ amount - %d; from - %d; to -%d\n", transfer_order->s_amount, transfer_order->s_src, transfer_order->s_dst);
+    fflush(elf);
     if (child_id == transfer_order->s_dst) {    
-        printf("Ttransfer_handler_dst id - %d; from - %d; to -%d\n", transfer_order->s_amount, transfer_order->s_src, transfer_order->s_dst);
+        printf("transfer_handler dst amount - %d; from - %d; to - %d\n", transfer_order->s_amount, transfer_order->s_src, transfer_order->s_dst);
         update_state(child_state, transfer_order->s_amount, current_time);  
 
         fprintf(elf, log_transfer_in_fmt, current_time, transfer_order->s_dst, transfer_order->s_amount, transfer_order->s_src);
@@ -182,10 +196,10 @@ void transfer_handler(void* __child_state, Message* msg) {
                     .s_magic = MESSAGE_MAGIC,
                     .s_type = ACK,
                     .s_local_time = current_time,
-                    .s_payload_len = 0,
+                    .s_payload_len = MAX_PAYLOAD_LEN + 1,
                 },
         };
-        msg.s_header.s_payload_len = strlen(msg.s_payload);
+        // msg.s_header.s_payload_len = strlen(msg.s_payload);
 
         Info info = {.fork_id = child_id, .N = N};
 
@@ -196,9 +210,20 @@ void transfer_handler(void* __child_state, Message* msg) {
                 }
             }
         }
-        send_to_pipe(&info, &msg, 0);                                       
+
+            char start_message[MAX_PAYLOAD_LEN];
+    timestamp_t time = get_physical_time();
+    
+    sprintf(start_message, log_started_fmt, time, child_id, getpid(), getppid(), child_state->balance_history.s_history[child_state->balance_history.s_history_len - 1].s_balance);
+    memset(msg.s_payload, '\0', sizeof(char)*(MAX_PAYLOAD_LEN));
+    memcpy(msg.s_payload, start_message, sizeof(char)*(MAX_PAYLOAD_LEN));
+        send_to_pipe(&info, &msg, 0);     
+
+        fprintf(elf, "Sended to parent pipe ACK\n");
+        fflush(elf);
     } else {         
-        printf("Ttransfer_handler_src id - %d; from - %d; to -%d\n", transfer_order->s_amount, transfer_order->s_src, transfer_order->s_dst);
+        fprintf(elf, "transfer_handler src id - %d; from - %d; to -%d\n", transfer_order->s_amount, transfer_order->s_src, transfer_order->s_dst);
+        fflush(elf);
         update_state(child_state, -transfer_order->s_amount, current_time); 
         fprintf(
             elf,
@@ -225,6 +250,35 @@ void transfer_handler(void* __child_state, Message* msg) {
         }
     }
         transfer(&info, transfer_order->s_src, transfer_order->s_dst, transfer_order->s_amount);
+
+
+    //             Message msg = {
+    //         .s_header =
+    //             {
+    //                 .s_magic = MESSAGE_MAGIC,
+    //                 .s_type = ACK,
+    //                 .s_local_time = current_time,
+    //                 .s_payload_len = 0,
+    //             },
+    //     };
+    //         char start_message[MAX_PAYLOAD_LEN];
+    // timestamp_t time = get_physical_time();
+    
+    // sprintf(start_message, log_started_fmt, time, child_id, getpid(), getppid(), child_state->balance_history.s_history[child_state->balance_history.s_history_len - 1].s_balance);
+    // memset(msg.s_payload, '\0', sizeof(char)*(MAX_PAYLOAD_LEN));
+    // memcpy(msg.s_payload, start_message, sizeof(char)*(MAX_PAYLOAD_LEN));
+    //     msg.s_header.s_payload_len = strlen(msg.s_payload);
+
+        // Info info = {.fork_id = child_id, .N = N};
+
+        // for(int i = 0; i < 10; i++) {
+        //     for(int j = 0; j < 10; j++) {
+        //         for(int k = 0; k < 2; k++) {
+        //             info.pm[i][j][k] = pm[i][j][k];
+        //         }
+        //     }
+        // }
+        // send_to_pipe(&info, &msg, 0);   
     }
 }
 
@@ -245,23 +299,27 @@ int handle_transfers(void* __child_state) {
     }
 
     Message msg_r;
-    fprintf(elf, "Started receiving message child_id %d\n", child_id);
-    fflush(elf);
     while (type != STOP) {
+        msg_r.s_header.s_payload_len = 0;
+        memset(msg_r.s_payload, '\0', sizeof(char)*MAX_PAYLOAD_LEN);
+        fprintf(elf, "Started receiving message child_id %d\n", child_id);
+        fflush(elf);
         type = receive_any(&info, &msg_r);
-        fprintf(stdout, "Got message with type: %d\n", type);
-        fflush(stdout);
+        fprintf(elf, "Child %d got message with type: %d\n", child_id, type);
+        fflush(elf);
         switch (type) {
             case TRANSFER:
-                transfer_handler(child_state, &msg_r);                
+                transfer_handler(child_state, &msg_r);
                 break;
-            // case STOP:
-            //     send_done_to_all(&local);
-            //     done();
-            //     break;
+            case STOP:
+                // send_done_to_all(&local);
+                // done();
+                fprintf(elf, "Child %d received STOP\n", child_id);
+                fflush(elf);
+                break;
             // case DONE:
-            //     count_child_proc = count_child_proc - 1;
-            //     break;                    
+                // count_child_proc = count_child_proc - 1;
+                // break;                    
         }
     }
     // type = -1;

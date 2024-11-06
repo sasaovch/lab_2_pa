@@ -48,7 +48,6 @@ int init_parent_work(int N) {
   local_id child_i = 1;
   while (child_i < N) {
 
-    Message started_msg;
     Info info = {.fork_id = 0, .N = N};
 
     for(int i = 0; i < 10; i++) {
@@ -58,11 +57,20 @@ int init_parent_work(int N) {
             }
         }
     }
+    Message started_msg;
 
-    receive(&info, 0, &started_msg);
-    if (started_msg.s_header.s_type == STARTED) {
+        // fprintf(elf, "Check payload: %s\n", started_msg.s_payload);
+    // fflush(elf);
+
+    receive(&info, child_i, &started_msg);
+    if (started_msg.s_header.s_type == STARTED && started_msg.s_header.s_payload_len > 0) {
+    fprintf(elf, "Init parent message from %d with payload: %s\n", child_i, started_msg.s_payload);
+    fflush(elf);
       child_i++;
     }
+
+    started_msg.s_header.s_payload_len = 0;
+    memset(started_msg.s_payload, '\0', sizeof(char)*MAX_PAYLOAD_LEN);
   }
 
   fprintf(elf, log_received_all_started_fmt, get_physical_time(), 0);
