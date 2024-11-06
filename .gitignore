@@ -5,3 +5,6 @@ pa2345_starter_code/CMakeCache.txt
 pa2345_starter_code/Makefile
 .cache
 build
+
+pa2345_starter_code/events.log
+pa2345_starter_code/pipes.log
