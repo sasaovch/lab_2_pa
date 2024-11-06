@@ -16,14 +16,13 @@
 #include <sys/types.h>
 
 
-//TODO: N - это общее количество: родитель + дети
 int init_child_work(void* __child_state) {
+
     ChildState* child_state = (ChildState *) __child_state;
     local_id child_id = child_state->fork_id;
     int N = child_state->N;
 
     Info child_info = {.fork_id = child_id, .N = N};
-
     for(int i = 0; i < 10; i++) {
         for(int j = 0; j < 10; j++) {
             for(int k = 0; k < 2; k++) {
@@ -32,6 +31,12 @@ int init_child_work(void* __child_state) {
         }
     }
 
+    timestamp_t time_started = get_physical_time();
+    fprintf(elf, log_started_fmt, time_started, child_id, getpid(), getppid(), child_state->balance_history.s_history[child_state->balance_history.s_history_len - 1].s_balance);
+    fflush(elf);
+
+    fprintf(stdout, log_started_fmt, time_started, child_id, getpid(), getppid(), child_state->balance_history.s_history[child_state->balance_history.s_history_len - 1].s_balance);
+    fflush(stdout);
 
     local_id line = 0;
     local_id column = 0;
@@ -47,16 +52,16 @@ int init_child_work(void* __child_state) {
                 if (column != child_id && pm[line][column][0] != -1) {
                     to_close = pm[line][column][0];
                     pm[line][column][0] = -1;
+                    close(to_close);                    
                 }
-                
-                column++;
                 
                 if (line != child_id && pm[line][column][1] != -1) {
                     to_close = pm[line][column][1];
                     pm[line][column][1] = -1;
+                    close(to_close);
                 }
                 
-                close(to_close);
+                column++;
             }
         }
         line++;
@@ -64,16 +69,15 @@ int init_child_work(void* __child_state) {
 
     Message start_msg;
     char start_message[MAX_PAYLOAD_LEN];
-    timestamp_t time = get_physical_time();
     
-    sprintf(start_message, log_started_fmt, time, child_id, getpid(), getppid(), child_state->balance_history.s_history[child_state->balance_history.s_history_len - 1].s_balance);
+    sprintf(start_message, log_started_fmt, time_started, child_id, getpid(), getppid(), child_state->balance_history.s_history[child_state->balance_history.s_history_len - 1].s_balance);
     memset(start_msg.s_payload, '\0', sizeof(char)*(MAX_PAYLOAD_LEN));
     memcpy(start_msg.s_payload, start_message, sizeof(char)*(MAX_PAYLOAD_LEN));
 
     start_msg.s_header.s_magic = MESSAGE_MAGIC;
     start_msg.s_header.s_payload_len = MAX_PAYLOAD_LEN + 1;
     start_msg.s_header.s_type = STARTED;
-    start_msg.s_header.s_local_time = time;
+    start_msg.s_header.s_local_time = time_started;
 
     send_multicast(&child_info, &start_msg);
 
@@ -91,8 +95,12 @@ int init_child_work(void* __child_state) {
         }
     }
 
-    fprintf(elf, log_received_all_started_fmt, get_physical_time(), child_id);
+    timestamp_t all_time = get_physical_time();
+    fprintf(elf, log_received_all_started_fmt, all_time, child_id);
     fflush(elf);
+
+    fprintf(stdout, log_received_all_started_fmt, all_time, child_id);
+    fflush(stdout);
 
     return 0;
 }
@@ -100,27 +108,18 @@ int init_child_work(void* __child_state) {
 void update_state(ChildState* child_state, int sum, timestamp_t current_time) {
     int balance_history_len = child_state->balance_history.s_history_len;
 
-    if (balance_history_len - current_time == 1) {
-        child_state->balance_history.s_history[balance_history_len - 1].s_balance += sum;
-
-    } else if (balance_history_len == current_time) {     
-        child_state->balance_history.s_history[balance_history_len] = (BalanceState) {
-            .s_balance = child_state->balance_history.s_history[balance_history_len - 1].s_balance + sum,
-            .s_time = current_time,
-            .s_balance_pending_in = 0,
-        };
-        
-        child_state->balance_history.s_history_len++;
-
-    } else if (current_time - balance_history_len > 0) {                   
+    if (current_time - balance_history_len > 0) {
         balance_t past_balance = child_state->balance_history.s_history[balance_history_len - 1].s_balance;
 
-        for (int index = balance_history_len; index < current_time; index++) {
+        int index = balance_history_len;
+        while (index < current_time) {
             child_state->balance_history.s_history[index] = (BalanceState) {
                 .s_balance = past_balance,
                 .s_time = index,
                 .s_balance_pending_in = 0,
             };
+            
+            index++;
         }
 
         child_state->balance_history.s_history[current_time] = (BalanceState) {
@@ -129,7 +128,18 @@ void update_state(ChildState* child_state, int sum, timestamp_t current_time) {
             .s_balance_pending_in = 0,
         };
 
-        child_state->balance_history.s_history_len = current_time + 1;
+        child_state->balance_history.s_history_len = current_time + 1;        
+    } else if (balance_history_len == current_time) {     
+        child_state->balance_history.s_history[balance_history_len] = (BalanceState) {
+            .s_balance = child_state->balance_history.s_history[balance_history_len - 1].s_balance + sum,
+            .s_time = current_time,
+            .s_balance_pending_in = 0,
+        };
+        
+        child_state->balance_history.s_history_len++;
+    } else if (balance_history_len - current_time == 1) {
+        child_state->balance_history.s_history[balance_history_len - 1].s_balance += sum;
+
     }  
 }
 
@@ -153,23 +163,25 @@ void transfer_handler(void* __child_state, Message* msg) {
     if (child_id == order->s_dst) {    
         fprintf(elf, log_transfer_in_fmt, current_time, order->s_dst, order->s_amount, order->s_src);
         fflush(elf);
+
+        fprintf(stdout, log_transfer_in_fmt, current_time, order->s_dst, order->s_amount, order->s_src);
+        fflush(stdout);
+
+        Message msg_n;
+        msg_n.s_header.s_magic = MESSAGE_MAGIC;
+        msg_n.s_header.s_payload_len = MAX_PAYLOAD_LEN + 1;
+        msg_n.s_header.s_type = ACK;
+        msg_n.s_header.s_local_time = current_time;
         
-        Message msg_n = {
-            .s_header =
-                {
-                    .s_magic = MESSAGE_MAGIC,
-                    .s_type = ACK,
-                    .s_local_time = current_time,
-                    .s_payload_len = MAX_PAYLOAD_LEN + 1,
-                },
-        };
-    
         update_state(child_state, order->s_amount, current_time);  
         send_to_pipe(&child_info, &msg_n, 0);     
     
     } else {         
         fprintf(elf,log_transfer_out_fmt, current_time, order->s_src, order->s_amount, order->s_dst);
         fflush(elf);
+
+        fprintf(stdout,log_transfer_out_fmt, current_time, order->s_src, order->s_amount, order->s_dst);
+        fflush(stdout);
 
         update_state(child_state, -order->s_amount, current_time); 
         transfer(&child_info, order->s_src, order->s_dst, order->s_amount);
@@ -199,19 +211,22 @@ int handle_transfers(void* __child_state) {
         msg_r.s_header.s_payload_len = 0;
         memset(msg_r.s_payload, '\0', sizeof(char)*MAX_PAYLOAD_LEN);
         type = receive_any(&child_info, &msg_r);
-        switch (type) {
-            case TRANSFER:
-                transfer_handler(child_state, &msg_r);
-                break;
-            case DONE:
-                wait_for_others_to_stop--;
-                break;                    
+        if (type == TRANSFER) {
+            transfer_handler(child_state, &msg_r);
+        } else if (type == DONE) {
+            wait_for_others_to_stop--;
         }
     }
 
     Message done_msg;
     char done_message[MAX_PAYLOAD_LEN];
     timestamp_t time = get_physical_time();
+
+    fprintf(elf, log_done_fmt, time, child_id, child_state->balance_history.s_history[child_state->balance_history.s_history_len - 1].s_balance);
+    fflush(elf);
+
+    fprintf(stdout, log_done_fmt, time, child_id, child_state->balance_history.s_history[child_state->balance_history.s_history_len - 1].s_balance);
+    fflush(stdout);
     
     sprintf(done_message, log_done_fmt, time, child_id, child_state->balance_history.s_history[child_state->balance_history.s_history_len - 1].s_balance);
     memset(done_msg.s_payload, '\0', sizeof(char)*(MAX_PAYLOAD_LEN));
@@ -226,9 +241,9 @@ int handle_transfers(void* __child_state) {
     
     Message msg_d;
     while (wait_for_others_to_stop > 0) {
-        msg_r.s_header.s_payload_len = 0;
-        memset(msg_r.s_payload, '\0', sizeof(char)*MAX_PAYLOAD_LEN);
-        type = receive_any(&child_info, &msg_r);
+        msg_d.s_header.s_payload_len = 0;
+        memset(msg_d.s_payload, '\0', sizeof(char)*MAX_PAYLOAD_LEN);
+        type = receive_any(&child_info, &msg_d);
         if (type == DONE) {
             wait_for_others_to_stop--;
         }
@@ -237,16 +252,16 @@ int handle_transfers(void* __child_state) {
     fprintf(elf, log_received_all_done_fmt, get_physical_time(), child_id);
     fflush(elf);
 
+    fprintf(stdout, log_received_all_done_fmt, get_physical_time(), child_id);
+    fflush(stdout);
+
     Message history_msg;
-    char history_message[MAX_PAYLOAD_LEN];
     timestamp_t history_time = get_physical_time();
     update_state(child_state, 0, history_time);
     
-    // sprintf(history_message, log_done_fmt, time, child_id, child_state->balance_history.s_history[child_state->balance_history.s_history_len - 1].s_balance);
     memset(history_msg.s_payload, '\0', sizeof(char)*(MAX_PAYLOAD_LEN));
     memcpy(history_msg.s_payload, &(child_state->balance_history), sizeof(BalanceHistory));
 
-    //FIXME: заменить создание объекта сообщения на такое вместо стурктуры {}
     history_msg.s_header.s_magic = MESSAGE_MAGIC;
     history_msg.s_header.s_payload_len = sizeof(BalanceHistory);
     history_msg.s_header.s_type = BALANCE_HISTORY;

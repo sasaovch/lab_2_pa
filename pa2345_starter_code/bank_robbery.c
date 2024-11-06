@@ -12,12 +12,10 @@
 
 void bank_robbery(void * parent_data, local_id max_id)
 {
-    for (int i = 1; i < max_id; i++) {
-        fprintf(stdout, "Transfer %d to %d\n", i, i+1);
-        fflush(stdout);
-        transfer(parent_data, i, i + 1, i);
+    for (int i = 1; i < max_id; ++i) {
+        transfer(parent_data, i, i + 1, 1);
     }
     if (max_id > 1) {
-        transfer(parent_data, max_id, 1, 5);
+        transfer(parent_data, max_id, 1, 1);
     }
 }

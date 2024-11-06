@@ -13,6 +13,12 @@
 #include <sys/types.h>
 
 int init_parent_work(int N) {
+    fprintf(elf, log_started_fmt, get_physical_time(), 0, getpid(), getppid(), 0);
+    fflush(elf);
+
+    fprintf(stdout, log_started_fmt, get_physical_time(), 0, getpid(), getppid(), 0);
+    fflush(stdout);
+
     local_id line = 0;
     local_id column = 0;
 
@@ -27,16 +33,16 @@ int init_parent_work(int N) {
                 if (column != 0 && pm[line][column][0] != -1) {
                     to_close = pm[line][column][0];
                     pm[line][column][0] = -1;
+                    close(to_close);                    
                 }
-                
-                column++;
                 
                 if (line != 0 && pm[line][column][1] != -1) {
                     to_close = pm[line][column][1];
                     pm[line][column][1] = -1;
+                    close(to_close);
                 }
                 
-                close(to_close);
+                column++;
             }
         }
         line++;
@@ -44,7 +50,6 @@ int init_parent_work(int N) {
   
     local_id child_i = 1;
     while (child_i < N) {
-
         Info info = {.fork_id = 0, .N = N};
 
         for(int i = 0; i < 10; i++) {
@@ -67,6 +72,9 @@ int init_parent_work(int N) {
 
     fprintf(elf, log_received_all_started_fmt, get_physical_time(), 0);
     fflush(elf);
+
+    fprintf(stdout, log_received_all_started_fmt, get_physical_time(), 0);
+    fflush(stdout);
     return 0;
 }
 
@@ -82,25 +90,6 @@ void do_parent_work(int N) {
     }
 
     bank_robbery(&parent_info, N - 1);
-    Message received_message;
-    int16_t type = -1;
-    
-    // //FIXME: remove
-    while (type != ACK) {
-        type = receive_any(&parent_info, &received_message);
-        
-        // fprintf(elf, "Parent got message with type: %d\n", type);
-        // fflush(elf);
-        // fprintf(elf, "Parent got message with payload: %s\n", received_message.s_payload);
-        // fflush(elf);
-
-        if (received_message.s_header.s_type == ACK) {
-        //   child_i++;
-        //   fprintf(elf, "Parent received ACK message\n");
-        //   fflush(elf);
-        //   type = ACK;
-        }
-    }
 
     Message stop_msg;
     char message[MAX_PAYLOAD_LEN];
@@ -119,7 +108,6 @@ void do_parent_work(int N) {
 
     local_id child_i = 1;
     while (child_i < N) {
-
         Message receive_msg;
         receive(&parent_info, child_i, &receive_msg);
         if (receive_msg.s_header.s_type == DONE && receive_msg.s_header.s_payload_len > 0) {
@@ -129,11 +117,15 @@ void do_parent_work(int N) {
         }
 
         receive_msg.s_header.s_payload_len = 0;
+        receive_msg.s_header.s_type = 0;
         memset(receive_msg.s_payload, '\0', sizeof(char)*MAX_PAYLOAD_LEN);
     }
 
     fprintf(elf, log_received_all_done_fmt, get_physical_time(), 0);
     fflush(elf);
+
+    fprintf(stdout, log_received_all_done_fmt, get_physical_time(), 0);
+    fflush(stdout);
 }
 
 void print_history_from_all_children(int N) {
@@ -157,9 +149,27 @@ void print_history_from_all_children(int N) {
         
         if (msg_hs.s_header.s_type == BALANCE_HISTORY) {
             BalanceHistory* balance_history = (BalanceHistory*) msg_hs.s_payload;
+            fprintf(elf, "Check history: %d\n", balance_history->s_id);
+            fflush(elf);
             a_hs.s_history[balance_history->s_id - 1] = *balance_history;
+            child++;
+
+            msg_hs.s_header.s_payload_len = 0;
+            msg_hs.s_header.s_type = 0;
+            memset(msg_hs.s_payload, '\0', sizeof(char)*MAX_PAYLOAD_LEN);
+        } else {
+            fprintf(elf, "Debug with payload: %s\n", msg_hs.s_payload);
+            fflush(elf);
         }
     }
     
     print_history(&a_hs);
+}
+
+void parent_are_waiting(int N) {
+    local_id child = 1;
+    while (child < N) {
+        wait(NULL);
+        child++;
+    }
 }

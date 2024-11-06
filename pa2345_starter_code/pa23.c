@@ -25,12 +25,13 @@ int is_not_child(int fork_id) {
 
 int main(int argc, char * argv[])
 {
-    //TODO: N - общее число потоков: родитель + дети
     int N = atoi(argv[2]) + 1;
     
     int *array = (int *) malloc((N) * sizeof(int));
     array[0] = N;
     for (int i = 1; i < N; i++) array[i] = atoi(argv[i + 2]);
+
+    for (int i = 0; i <N; i++) printf("%d\n", array[i]);
 
     elf = fopen(events_log, "a");
     plf = fopen(pipes_log, "a");
@@ -50,7 +51,6 @@ int main(int argc, char * argv[])
                 int descriptors[2];
                 pipe(descriptors);
 
-
                 fcntl(descriptors[0], F_SETFL, fcntl(descriptors[0], F_GETFL, 0) | O_NONBLOCK);
                 fcntl(descriptors[1], F_SETFL, fcntl(descriptors[1], F_GETFL, 0) | O_NONBLOCK);
 
@@ -69,7 +69,7 @@ int main(int argc, char * argv[])
     local_id number_id = 1;
     while (number_id < N) {
         int fork_id = fork();
-        if (is_not_child(fork_id)) {
+        if (!is_not_child(fork_id)) {
             number_id++;
         } else {
             ChildState child_state = {
@@ -95,7 +95,8 @@ int main(int argc, char * argv[])
     init_parent_work(N);
     do_parent_work(N);
     print_history_from_all_children(N);
-
+    parent_are_waiting(N);
+    
     free(array);
     return 0;
 }
