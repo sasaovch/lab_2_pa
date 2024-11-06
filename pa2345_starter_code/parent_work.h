@@ -6,5 +6,7 @@
 #include "pipes_const.h"
 
 int init_parent_work(int N);
+void do_parent_work(int N);
+void print_history_from_all_children(int N);
 
 #endif

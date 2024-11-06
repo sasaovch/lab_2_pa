@@ -17,7 +17,7 @@ void bank_robbery(void * parent_data, local_id max_id)
         fflush(stdout);
         transfer(parent_data, i, i + 1, i);
     }
-    // if (max_id > 1) {
-    //     transfer(parent_data, max_id, 1, 1);
-    // }
+    if (max_id > 1) {
+        transfer(parent_data, max_id, 1, 5);
+    }
 }
