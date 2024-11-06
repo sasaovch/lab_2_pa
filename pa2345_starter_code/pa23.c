@@ -89,8 +89,9 @@ int main(int argc, char * argv[])
 
     // Чтение N
     //TODO: N - общее число потоков: родитель + дети
-    int N = 3;
-    // atoi(argv[2]) + 1;
+    int N = 
+    // 3;
+    atoi(argv[2]) + 1;
     // if (argc != N + 3) { // Проверка, что количество аргументов соответствует N
         // printf("Error: expected %d numbers after N\n", N);
         // return 1;
@@ -106,8 +107,9 @@ int main(int argc, char * argv[])
     // Заполнение массива
     // FIXME: тут определиться нужен ли
     array[0] = N; // Первый элемент - N
-    for (int i = 1; i < N; i++) array[i] = i;
-    // atoi(argv[i + 3]); // Чтение целых чисел S
+    for (int i = 1; i < N; i++) array[i] = 
+    // i;
+    atoi(argv[i + 2]); // Чтение целых чисел S
 
     // Вывод массива для проверки
     // printf("Array: ");
@@ -190,7 +192,7 @@ int main(int argc, char * argv[])
     }
 
     // FIXME: понять что нужно
-    bank_robbery(&info, N);
+    bank_robbery(&info, N - 1);
     // print_history(all);
     
     free(array);
